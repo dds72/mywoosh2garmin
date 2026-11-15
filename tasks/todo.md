@@ -27,5 +27,11 @@ Files: .github/workflows/release.yml, README.md
 Acceptance: the release includes Darwin arm64 plus Windows/Linux; documentation
 explains launching the download. Intel was removed at the user's request.
 - [x] Apple Silicon job passes tests, vet, and native build.
-- [ ] Tagged release contains the three completed platform executables, reused
+- [x] Tagged release contains the three completed platform executables, reused
   from run 43704791261 as requested; application source is unchanged.
+
+Published: https://github.com/dds72/mywoosh2garmin/releases/tag/v1.0.3
+
+GitHub returned HTTP 409 to both cancel and force-cancel for the obsolete Intel
+retry ("re-run that has not yet queued"). Release publication did not wait for
+that retry. Intel is removed from the workflow on main and from this release.
