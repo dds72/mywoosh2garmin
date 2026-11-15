@@ -3,7 +3,9 @@ package garmin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -25,6 +27,14 @@ var (
 	titleRe  = regexp.MustCompile(`<title>(.+?)</title>`)
 	ticketRe = regexp.MustCompile(`embed\?ticket=([^"]+)"`)
 )
+
+// ErrMFACancelled indicates that the user cancelled verification.
+var ErrMFACancelled = errors.New("Garmin verification cancelled")
+
+// MFACodeProvider requests a code when Garmin requires two-factor authentication.
+// It runs on the login caller's goroutine. Return ErrMFACancelled to stop login.
+// The message explains whether this is the first prompt or a retry.
+type MFACodeProvider func(message string) (string, error)
 
 type oauthConsumer struct {
 	ConsumerKey    string `json:"consumer_key"`
@@ -68,8 +78,7 @@ func (s *ssoSession) get(reqURL string, useReferer bool) (string, error) {
 		return "", err
 	}
 	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode,
-			string(body[:min(300, len(body))]))
+		return "", fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 	return string(body), nil
 }
@@ -95,14 +104,19 @@ func (s *ssoSession) post(reqURL string, form url.Values, useReferer bool) (stri
 		return "", err
 	}
 	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode,
-			string(body[:min(300, len(body))]))
+		return "", fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 	return string(body), nil
 }
 
 // Login performs the full Garmin SSO login flow and returns OAuth tokens.
 func Login(email, password, domain string) (*OAuth1Token, *OAuth2Token, error) {
+	return LoginWithMFA(email, password, domain, nil)
+}
+
+// LoginWithMFA completes SSO, asking for a verification code only if required.
+// A nil provider returns an error if the account requires MFA.
+func LoginWithMFA(email, password, domain string, provider MFACodeProvider) (*OAuth1Token, *OAuth2Token, error) {
 	if domain == "" {
 		domain = "garmin.com"
 	}
@@ -157,7 +171,7 @@ func Login(email, password, domain string) (*OAuth1Token, *OAuth2Token, error) {
 		"username": {email},
 		"password": {password},
 		"embed":    {"true"},
-		"_csrf":    {csrf[1]},
+		"_csrf":    {html.UnescapeString(csrf[1])},
 	}
 
 	body, err = sess.post(
@@ -177,9 +191,12 @@ func Login(email, password, domain string) (*OAuth1Token, *OAuth2Token, error) {
 
 	title := titleMatch[1]
 	if strings.Contains(title, "MFA") {
-		return nil, nil, fmt.Errorf(
-			"MFA is required but not yet supported in this tool.\n" +
-				"  Disable MFA temporarily, or use the Python version")
+		body, err = sess.verifyMFA(ssoBase, signinParams, body, provider)
+		if err != nil {
+			return nil, nil, err
+		}
+		// verifyMFA only returns a page whose title is Success.
+		title = "Success"
 	}
 	if title != "Success" {
 		return nil, nil, fmt.Errorf("login failed: %q (check credentials)", title)
@@ -205,6 +222,51 @@ func Login(email, password, domain string) (*OAuth1Token, *OAuth2Token, error) {
 	}
 
 	return oauth1Token, oauth2Token, nil
+}
+
+func (s *ssoSession) verifyMFA(ssoBase string, params url.Values, body string, provider MFACodeProvider) (string, error) {
+	if provider == nil {
+		return "", errors.New("Garmin requires a verification code; use LoginWithMFA with a code provider")
+	}
+	message := "Enter the verification code from Garmin (check your email or SMS)."
+	const maxAttempts = 3
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		// Garmin may rotate the CSRF token after a rejected code. Always use
+		// the latest challenge and the same cookie jar as the password login.
+		csrf := csrfRe.FindStringSubmatch(body)
+		if csrf == nil {
+			return "", errors.New("CSRF token not found in Garmin verification page; try logging in again")
+		}
+		code, err := provider(message)
+		if err != nil {
+			return "", fmt.Errorf("MFA code entry: %w", err)
+		}
+		code = strings.TrimSpace(code)
+		if code == "" {
+			return "", errors.New("Garmin verification code is empty")
+		}
+		body, err = s.post(ssoBase+"/sso/verifyMFA/loginEnterMfaCode?"+params.Encode(), url.Values{
+			"mfa-code": {code},
+			"embed":    {"true"},
+			"_csrf":    {html.UnescapeString(csrf[1])},
+			"fromPage": {"setupEnterMfaCode"},
+		}, true)
+		if err != nil {
+			return "", fmt.Errorf("Garmin verification failed: %w", err)
+		}
+		title := titleRe.FindStringSubmatch(body)
+		if title == nil {
+			return "", errors.New("no title in Garmin verification response; try logging in again")
+		}
+		if title[1] == "Success" {
+			return body, nil
+		}
+		if !strings.Contains(title[1], "MFA") {
+			return "", errors.New("Garmin verification failed or the session expired; try logging in again")
+		}
+		message = "Garmin did not accept that code. Enter a valid code, or cancel and log in again for a new one."
+	}
+	return "", errors.New("Garmin did not accept the verification code after 3 attempts; try logging in again")
 }
 
 // ExchangeForOAuth2 refreshes the OAuth2 token using an existing OAuth1 token.

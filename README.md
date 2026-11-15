@@ -48,6 +48,21 @@ Enter your **Garmin Connect email** and **password**. These are only sent direct
 
 After the first login, a session token is cached locally (`~/.mywhoosh2garmin/`) and reused for up to a year. You won't need to enter your password again unless the token expires.
 
+**Two-factor authentication (2FA/MFA) is supported.** Keep it enabled on your
+Garmin account. When Garmin requests verification during an upload, a dialog
+asks for the code sent by Garmin. Enter the code and click **Verify** to continue.
+Rejected codes can be retried up to three times. **Cancel** stops the login and
+the current batch; you can start another upload when ready. If the code expires,
+cancel and start again to request a new login challenge.
+
+Verification codes are never saved. After successful verification, the cached
+session is reused for later uploads until Garmin requires a fresh login.
+
+This fork fixes the older message “MFA is required but not yet supported in this
+tool.” If you still see that message, you are running an older executable.
+Build this fork from source or download its Windows/Linux build artifacts from
+the latest successful [Build & Release run](https://github.com/dds72/mywoosh2garmin/actions/workflows/release.yml).
+
 ### 3. Fetch Activities
 
 Click **📋 Fetch Activities (last 10 days)** and the app will:

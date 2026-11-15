@@ -104,6 +104,7 @@ func main() {
 
 	// --- Garmin state ---
 	var garminClient *garmin.Client
+	var garminMu sync.Mutex
 
 	// --- Log panel ---
 	logEntry := widget.NewMultiLineEntry()
@@ -169,6 +170,9 @@ func main() {
 
 	// --- Helper: authenticate to Garmin ---
 	ensureGarmin := func() (*garmin.Client, error) {
+		// Concurrent individual uploads must not start overlapping MFA sessions.
+		garminMu.Lock()
+		defer garminMu.Unlock()
 		if garminClient != nil && garminClient.OAuth2 != nil && !garminClient.OAuth2.Expired() {
 			return garminClient, nil
 		}
@@ -181,18 +185,31 @@ func main() {
 			return client, nil
 		}
 
-		email := garminEmailEntry.Text
-		password := garminPasswordEntry.Text
+		var email, password string
+		fyne.DoAndWait(func() {
+			email = garminEmailEntry.Text
+			password = garminPasswordEntry.Text
+		})
 		if email == "" || password == "" {
 			return nil, fmt.Errorf("enter Garmin email & password for first login")
 		}
 
-		if err := client.Login(email, password); err != nil {
+		if err := client.LoginWithMFA(email, password, func(message string) (string, error) {
+			return promptGarminMFA(w, message)
+		}); err != nil {
 			return nil, fmt.Errorf("Garmin login failed: %w", err)
 		}
 
 		garminClient = client
 		return client, nil
+	}
+
+	uploadToGarmin := func(client *garmin.Client, path string) error {
+		// Uploads can refresh the shared tokens too. Keep token updates and
+		// cache writes serialized with login and other uploads.
+		garminMu.Lock()
+		defer garminMu.Unlock()
+		return client.UploadFIT(path)
 	}
 
 	// --- Helper: process and upload a single activity ---
@@ -261,7 +278,7 @@ func main() {
 
 			// 5. Upload to Garmin
 			appendLog("  ⬆ Uploading to Garmin Connect…")
-			if err := client.UploadFIT(outputPath); err != nil {
+			if err := uploadToGarmin(client, outputPath); err != nil {
 				if strings.Contains(err.Error(), "duplicate") {
 					appendLog("  ⚠ Already on Garmin (duplicate)")
 					tracker.MarkSynced(activity.ID)
@@ -455,6 +472,15 @@ func main() {
 				})
 			}()
 
+			// Authenticate once before the batch. Cancellation or failed login
+			// stops the batch instead of requesting a new code for each activity.
+			client, err := ensureGarmin()
+			if err != nil {
+				appendLog("  ❌ " + err.Error())
+				return
+			}
+			fyne.Do(func() { garminStatusLabel.SetText("✓ Garmin connected") })
+
 			success, failed := 0, 0
 			for i, act := range currentActivities {
 				if tracker.IsSynced(act.ID) {
@@ -496,18 +522,8 @@ func main() {
 					continue
 				}
 
-				// Garmin auth
-				client, err := ensureGarmin()
-				if err != nil {
-					appendLog("  ❌ " + err.Error())
-					os.Remove(inputPath)
-					os.Remove(outputPath)
-					failed++
-					continue
-				}
-
 				// Upload
-				if err := client.UploadFIT(outputPath); err != nil {
+				if err := uploadToGarmin(client, outputPath); err != nil {
 					if strings.Contains(err.Error(), "duplicate") {
 						appendLog("  ⚠ Already on Garmin (duplicate)")
 						tracker.MarkSynced(act.ID)

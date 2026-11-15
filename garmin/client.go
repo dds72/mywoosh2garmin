@@ -63,7 +63,12 @@ func (c *Client) Resume() error {
 
 // Login performs a fresh SSO login with the given credentials.
 func (c *Client) Login(email, password string) error {
-	oauth1, oauth2, err := Login(email, password, c.Domain)
+	return c.LoginWithMFA(email, password, nil)
+}
+
+// LoginWithMFA logs in and caches tokens after any required verification succeeds.
+func (c *Client) LoginWithMFA(email, password string, provider MFACodeProvider) error {
+	oauth1, oauth2, err := LoginWithMFA(email, password, c.Domain, provider)
 	if err != nil {
 		return err
 	}
@@ -189,7 +194,7 @@ func parseUploadResult(status int, body []byte) error {
 	// Check for failures in the detailed result
 	var result struct {
 		DetailedImportResult struct {
-			Failures []interface{} `json:"failures"`
+			Failures  []interface{} `json:"failures"`
 			Successes []interface{} `json:"successes"`
 		} `json:"detailedImportResult"`
 	}
