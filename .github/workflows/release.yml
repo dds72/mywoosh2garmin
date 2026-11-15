@@ -32,11 +32,6 @@ jobs:
             goarch: arm64
             cc: clang
             artifact: mywhoosh2garmin-darwin-arm64
-          - os: macos-15-intel
-            goos: darwin
-            goarch: amd64
-            cc: clang
-            artifact: mywhoosh2garmin-darwin-amd64
 
     runs-on: ${{ matrix.os }}
 
@@ -106,4 +101,3 @@ jobs:
             artifacts/mywhoosh2garmin-linux-amd64/mywhoosh2garmin-linux-amd64
             artifacts/mywhoosh2garmin-windows-amd64.exe/mywhoosh2garmin-windows-amd64.exe
             artifacts/mywhoosh2garmin-darwin-arm64/mywhoosh2garmin-darwin-arm64
-            artifacts/mywhoosh2garmin-darwin-amd64/mywhoosh2garmin-darwin-amd64

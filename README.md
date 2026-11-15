@@ -32,7 +32,6 @@ Grab the latest release for your platform from the [**Releases**](../../releases
 | Windows | `mywhoosh2garmin-windows-amd64.exe` |
 | Linux | `mywhoosh2garmin-linux-amd64` |
 | macOS — Apple Silicon (M1 and later) | `mywhoosh2garmin-darwin-arm64` |
-| macOS — Intel | `mywhoosh2garmin-darwin-amd64` |
 
 No installation needed — just download and run.
 
@@ -44,8 +43,8 @@ chmod +x mywhoosh2garmin-darwin-arm64
 ./mywhoosh2garmin-darwin-arm64
 ```
 
-Use `darwin-amd64` instead of `darwin-arm64` on Intel Macs. The macOS executables
-target macOS 11 or later and are not Apple-notarized.
+The macOS executable targets Apple Silicon on macOS 11 or later and is not
+Apple-notarized.
 
 ## How to Use
 

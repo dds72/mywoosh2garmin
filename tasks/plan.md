@@ -21,7 +21,8 @@ different mobile API; migrating protocols is outside this reported failure.
 Verification uses synthetic HTTP responses, not a real Garmin account. A live
 account sign-in remains a manual check. Build Go 1.24.13, matching go.mod.
 
-User-requested extension: release native Darwin executables for Apple Silicon
-and Intel. Add macOS runners to the build matrix, keep Linux dependency setup
-conditional, document launching the executables, and publish all four platform
-assets in a tagged GitHub release.
+User-requested extension: release a native Darwin executable for Apple Silicon.
+Keep Linux dependency setup conditional and document launching the executable.
+The user removed Intel support and requested reuse of the completed release
+artifacts. Publish the successful Apple Silicon, Windows, and Linux artifacts
+from run 43704791261; application source is unchanged by the target removal.

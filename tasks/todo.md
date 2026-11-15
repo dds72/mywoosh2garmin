@@ -20,12 +20,12 @@ Files: README.md, .github/workflows/release.yml
 Acceptance: documentation explains 2FA and points downloads to this fork;
 CI tests and builds Windows/Linux/macOS binaries; fixed source is pushed to the fork.
 - [x] Review diff and run vet/race tests.
-- [ ] Push and verify GitHub build results.
+- [x] Push and verify GitHub build results (Apple Silicon, Windows, Linux passed).
 
 ## 4. Publish macOS executables (user-requested extension)
 Files: .github/workflows/release.yml, README.md
-Acceptance: the release includes Darwin arm64 and amd64 executables built on
-matching macOS runners, plus Windows/Linux; documentation identifies each Mac
-architecture and explains launching the download.
-- [ ] Both macOS jobs pass tests, vet, and native builds.
-- [ ] Tagged release contains all four platform executables.
+Acceptance: the release includes Darwin arm64 plus Windows/Linux; documentation
+explains launching the download. Intel was removed at the user's request.
+- [x] Apple Silicon job passes tests, vet, and native build.
+- [ ] Tagged release contains the three completed platform executables, reused
+  from run 43704791261 as requested; application source is unchanged.
