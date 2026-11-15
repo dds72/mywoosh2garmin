@@ -18,6 +18,14 @@ stops after failed/cancelled login rather than prompting for every activity.
 ## 3. Deliver the public fork
 Files: README.md, .github/workflows/release.yml
 Acceptance: documentation explains 2FA and points downloads to this fork;
-CI tests and builds Windows/Linux binaries; fixed source is pushed to the fork.
+CI tests and builds Windows/Linux/macOS binaries; fixed source is pushed to the fork.
 - [x] Review diff and run vet/race tests.
 - [ ] Push and verify GitHub build results.
+
+## 4. Publish macOS executables (user-requested extension)
+Files: .github/workflows/release.yml, README.md
+Acceptance: the release includes Darwin arm64 and amd64 executables built on
+matching macOS runners, plus Windows/Linux; documentation identifies each Mac
+architecture and explains launching the download.
+- [ ] Both macOS jobs pass tests, vet, and native builds.
+- [ ] Tagged release contains all four platform executables.

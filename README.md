@@ -31,8 +31,21 @@ Grab the latest release for your platform from the [**Releases**](../../releases
 |---|---|
 | Windows | `mywhoosh2garmin-windows-amd64.exe` |
 | Linux | `mywhoosh2garmin-linux-amd64` |
+| macOS — Apple Silicon (M1 and later) | `mywhoosh2garmin-darwin-arm64` |
+| macOS — Intel | `mywhoosh2garmin-darwin-amd64` |
 
 No installation needed — just download and run.
+
+On macOS, download the executable for your Mac, then run it from Terminal:
+
+```bash
+cd ~/Downloads
+chmod +x mywhoosh2garmin-darwin-arm64
+./mywhoosh2garmin-darwin-arm64
+```
+
+Use `darwin-amd64` instead of `darwin-arm64` on Intel Macs. The macOS executables
+target macOS 11 or later and are not Apple-notarized.
 
 ## How to Use
 
@@ -60,7 +73,7 @@ session is reused for later uploads until Garmin requires a fresh login.
 
 This fork fixes the older message “MFA is required but not yet supported in this
 tool.” If you still see that message, you are running an older executable.
-Build this fork from source or download its Windows/Linux build artifacts from
+Build this fork from source or download its Windows/Linux/macOS build artifacts from
 the latest successful [Build & Release run](https://github.com/dds72/mywoosh2garmin/actions/workflows/release.yml).
 
 ### 3. Fetch Activities
@@ -91,6 +104,7 @@ For each activity, the app will:
 
 - Go 1.24+
 - GCC (for Fyne/CGO)
+- macOS: Xcode Command Line Tools (`xcode-select --install`)
 - Windows cross-compile from Linux: `mingw-w64`, `libgl-dev`, `xorg-dev`, `libxxf86vm-dev`
 
 ### Build
